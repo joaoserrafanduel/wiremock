@@ -1,4 +1,4 @@
-package org.application // Correct package declaration
+/*ackage org.application // Correct package declaration
 
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit.WireMockRule
@@ -185,7 +185,7 @@ class JsonApiClientTest {
         )
     }
 
-    /*@Test(expected = Exception::class)
+    @Test(expected = Exception::class)
     fun `test processProductsAndSendBatch when source API fails`() {
         stubFor(get(urlEqualTo("/api/products"))
             .willReturn(aResponse()
@@ -219,5 +219,5 @@ class JsonApiClientTest {
             "http://localhost:8089/api/product-batches",
             "BATCH_FAIL_DEST"
         )
-    }*/
-}
+    }
+}*/
