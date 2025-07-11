@@ -2,7 +2,7 @@ package org.application
 
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.junit.WireMockRule
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig // <--- MAKE SURE THIS IMPORT IS PRESENT!
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
