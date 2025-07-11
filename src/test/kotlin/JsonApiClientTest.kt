@@ -10,7 +10,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.net.HttpURLConnection
 
 class JsonApiClientTest {
 
@@ -22,7 +21,7 @@ class JsonApiClientTest {
 
     @Before
     fun setup() {
-        jsonApiClient = JsonApiClient(SimpleHttpClient, gson)
+        jsonApiClient = JsonApiClient(HttpClient, gson)
     }
 
     private fun mockSourceApiProducts(products: List<Product>, status: Int = 200) {

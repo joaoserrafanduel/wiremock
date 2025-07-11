@@ -8,7 +8,7 @@ import org.application.data.Product
 import org.application.data.ProductBatch
 
 class JsonApiClient(
-    private val httpClient: SimpleHttpClient,
+    private val httpClient: HttpClient,
     private val gson: Gson = Gson()
 ) {
 
