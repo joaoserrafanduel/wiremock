@@ -15,7 +15,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Test class for [SimpleHttpClient].
+ * Test class for [HttpClient].
  */
 class HttpClientTest {
 
@@ -171,7 +171,7 @@ class HttpClientTest {
     }
 
     /**
-     * Test to ensure the [SimpleHttpClient.getClient] method returns a non-null [OkHttpClient] instance.
+     * Test to ensure the [HttpClient.getClient] method returns a non-null [OkHttpClient] instance.
      */
     @Test
     fun `test getClient returns OkHttpClient instance`() {
@@ -182,6 +182,5 @@ class HttpClientTest {
 
         // Assert: Verify the returned client.
         assertNotNull(client)
-        assertTrue(client is OkHttpClient)
     }
 }
