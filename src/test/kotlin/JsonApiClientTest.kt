@@ -12,6 +12,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.net.HttpURLConnection
+import kotlin.test.DefaultAsserter.fail
 
 /**
  * Integration and unit tests for the [JsonApiClient] class.
@@ -173,50 +174,50 @@ class JsonApiClientTest {
 
     /**
      * Tests `sendProductBatch` behavior when the sent JSON structure does not match
-     * what the destination API (mocked by WireMock) expects, leading to a 404 (unmatched request).
+     * what the destination API (mocked by WireMock) explicitly expects, leading to a 404.
+     *
+     * **Scenario:** A WireMock stub is explicitly defined to match a specific "incorrect"
+     * JSON body (with a different timestamp) and is configured to return a 404 Not Found.
+     * The `JsonApiClient` then sends this "incorrect" batch.
+     * **Verification:** Asserts that the client correctly throws an exception, and that the
+     * exception's message indicates a 404 error, confirming proper client-side error handling
+     * for explicitly rejected (malformed) requests.
      */
-    /*@Test
-    fun `test sendProductBatch with incorrect JSON structure (WireMock's perspective)`() {
-        // Arrange: Configure WireMock to expect a *very specific* JSON body.
-        // If the client sends anything slightly different, this mock won't match,
-        // and WireMock will return a 404 by default for unmatched requests.
-        stubFor(post(urlEqualTo("/api/product-batches"))
-            .withRequestBody(equalToJson("""
-                {
-                    "batchId": "B001",
-                    "products": [
-                        { "id": "P003", "name": "Keyboard", "price": 75.0, "category": "Electronics", "inStock": true }
-                    ],
-                    "timestamp": 1678886400000
-                }
-            """, true, true)) // Exact JSON match expected by the mock
-            .willReturn(aResponse()
-                .withStatus(200)
-                .withBody("Correctly received batch!")))
-
+    @Test
+    fun `test sendProductBatch with incorrect JSON structure (explicit 404 response)`() {
         val products = listOf(
             Product("P003", "Keyboard", 75.0, "Electronics", true)
         )
-        val batch = ProductBatch("B001", products, 1678886400000L) // Correct batch for matching
+        // The batch that will be sent, which is "incorrect" due to its timestamp (different from a hypothetical 'correct' one)
+        val incorrectBatch = ProductBatch("B001", products, 1234567890000L)
 
-        // Act: Send a batch with a *different* timestamp, which should NOT match the stub
-        val incorrectBatch = ProductBatch("B001", products, 1234567890000L) // Different timestamp
+        // Arrange: Configure WireMock to *explicitly* return a 404 for the incorrect JSON structure.
+        // This stub will match the 'incorrectBatch' when it is sent.
+        stubFor(post(urlEqualTo("/api/product-batches"))
+            .withRequestBody(equalToJson(gson.toJson(incorrectBatch), true, true)) // Match the *incorrect* batch's JSON
+            .willReturn(aResponse()
+                .withStatus(404) // Explicitly return 404
+                .withHeader("Content-Type", "application/json")
+                .withBody("{\"error\": \"Invalid Timestamp or Data\"}"))) // Optional: provide a custom error body
 
         try {
+            // Act: Send the batch with the incorrect timestamp. This is expected to trigger the 404 stub.
             jsonApiClient.sendProductBatch("http://localhost:${wireMockRule.port()}/api/product-batches", incorrectBatch)
             // If the code reaches here, it means the API accepted the incorrect JSON, which is a test failure.
-            org.junit.Assert.fail("Expected an exception for incorrect JSON structure, but none was thrown.")
+            // JUnit's fail() method will mark the test as failed.
+            fail("Expected an exception for incorrect JSON structure, but none was thrown.")
         } catch (e: Exception) {
-            // Assert: Verify that an exception was thrown and its message indicates a 404
-            assertTrue("Expected a failure due to API mismatch (WireMock's 404 behavior for unmatched request)",
-                e.message!!.contains("Failed to send product batch: 404 - "))
+            // Assert: Verify that an exception was thrown and its message indicates a 404.
+            // e.message!! asserts that the exception message is not null.
+            assertTrue("Expected a failure due to API mismatch (client handling 404)",
+                e.message!!.contains("Failed to send product batch: 404 - ")) // Check for specific error message indicating 404
         }
 
-        // Verify: Ensure that the *correct* JSON request (which should have been matched) was NOT received
-        // (because we sent an incorrect one, causing a 404)
-        verify(0, postRequestedFor(urlEqualTo("/api/product-batches"))
-            .withRequestBody(equalToJson(gson.toJson(batch), true, true)))
-    }*/
+        // Optional: Verify that the incorrect request was indeed made exactly once.
+        // This confirms the client sent the expected "bad" request.
+        verify(1, postRequestedFor(urlEqualTo("/api/product-batches"))
+            .withRequestBody(equalToJson(gson.toJson(incorrectBatch), true, true)))
+    }
 
     /**
      * Tests `sendProductBatch` behavior when the destination API returns a 500 Internal Server Error.
