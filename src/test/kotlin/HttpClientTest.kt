@@ -24,13 +24,13 @@ class HttpClientTest {
      * It uses `dynamicPort()` to automatically find a free port, preventing "Address already in use" errors.
      */
     @get:Rule
-    val wireMockRule = WireMockRule(wireMockConfig().dynamicPort()) // <--- THIS LINE MUST BE CHANGED!
+    val wireMockRule = WireMockRule(wireMockConfig().dynamicPort())
 
     /**
      * Tests a successful HTTP GET request resulting in a 200 OK status.
      */
     @Test
-    fun `test HTTP GET 200`() {
+    fun `test HTTP GET 200 OK`() {
         // Arrange: Configure WireMock
         stubFor(
             get(urlEqualTo("/hello"))
@@ -52,7 +52,7 @@ class HttpClientTest {
      * Tests an HTTP GET request that results in a 404 Not Found status.
      */
     @Test(expected = Exception::class)
-    fun `test HTTP GET 404`() {
+    fun `test HTTP GET 404 Not Found`() {
         // Arrange: Configure WireMock
         stubFor(
             get(urlEqualTo("/error"))

@@ -12,6 +12,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.net.HttpURLConnection
+import java.util.*
 import kotlin.test.DefaultAsserter.fail
 
 /**
@@ -96,8 +97,8 @@ class JsonApiClientTest {
     fun `test fetchProducts success`() {
         // Arrange: Prepare a list of products to be returned by the mocked API
         val products = listOf(
-            Product("P001", "Laptop", 1200.0, "Electronics", true),
-            Product("P002", "Mouse", 25.0, "Electronics", true)
+            Product(UUID.randomUUID(), "Laptop", 1200.0, "Electronics", true),
+            Product(UUID.randomUUID(), "Mouse", 25.0, "Electronics", true)
         )
         // Configure WireMock to return these products with a 200 OK status
         mockSourceApiProducts(products)
@@ -155,9 +156,9 @@ class JsonApiClientTest {
     @Test
     fun `test sendProductBatch success`() {
         val products = listOf(
-            Product("P003", "Keyboard", 75.0, "Electronics", true)
+            Product(UUID.randomUUID(), "Keyboard", 75.0, "Electronics", true)
         )
-        val batch = ProductBatch("B001", products, 1678886400000L) // Example timestamp
+        val batch = ProductBatch(UUID.randomUUID(), products, 1678886400000L) // Example timestamp
 
         mockDestinationApiSuccess()
 
@@ -186,10 +187,10 @@ class JsonApiClientTest {
     @Test
     fun `test sendProductBatch with incorrect JSON structure (explicit 404 response)`() {
         val products = listOf(
-            Product("P003", "Keyboard", 75.0, "Electronics", true)
+            Product(UUID.randomUUID(), "Keyboard", 75.0, "Electronics", true)
         )
         // The batch that will be sent, which is "incorrect" due to its timestamp (different from a hypothetical 'correct' one)
-        val incorrectBatch = ProductBatch("B001", products, 1234567890000L)
+        val incorrectBatch = ProductBatch(UUID.randomUUID(), products, 1234567890000L)
 
         // Arrange: Configure WireMock to *explicitly* return a 404 for the incorrect JSON structure.
         // This stub will match the 'incorrectBatch' when it is sent.
@@ -227,9 +228,9 @@ class JsonApiClientTest {
     fun `test sendProductBatch when destination API returns 500`() {
         // Arrange: Prepare a product batch
         val products = listOf(
-            Product("P004", "Monitor", 300.0, "Electronics", false)
+            Product(UUID.randomUUID(), "Monitor", 300.0, "Electronics", false)
         )
-        val batch = ProductBatch("B002", products, System.currentTimeMillis())
+        val batch = ProductBatch(UUID.randomUUID(), products, System.currentTimeMillis())
 
         // Configure WireMock to return a 500 status for the batch POST
         stubFor(post(urlEqualTo("/api/product-batches"))
@@ -253,15 +254,15 @@ class JsonApiClientTest {
     fun `test processProductsAndSendBatch success`() {
         // Arrange: Prepare products for the source API and mock its successful response
         val sourceProducts = listOf(
-            Product("P005", "Webcam", 50.0, "Peripherals", true),
-            Product("P006", "Microphone", 70.0, "Peripherals", false)
+            Product(UUID.randomUUID(), "Webcam", 50.0, "Peripherals", true),
+            Product(UUID.randomUUID(), "Microphone", 70.0, "Peripherals", false)
         )
         mockSourceApiProducts(sourceProducts)
 
         // Arrange: Mock the destination API for a successful batch reception
         mockDestinationApiSuccess()
 
-        val batchId = "BATCH_XYZ"
+        val batchId = UUID.randomUUID()
         // Act: Call the combined processing and sending method
         val response = jsonApiClient.processProductsAndSendBatch(
             "http://localhost:${wireMockRule.port()}/api/products", // Source URL
@@ -276,9 +277,9 @@ class JsonApiClientTest {
         verify(postRequestedFor(urlEqualTo("/api/product-batches"))
             .withHeader("Content-Type", equalToIgnoreCase("application/json; charset=utf-8")) // <-- CHANGED HERE
             // Use JSON path matchers to verify specific fields within the sent JSON body
-            .withRequestBody(matchingJsonPath("$.batchId", equalTo(batchId)))
+            .withRequestBody(matchingJsonPath("$.batchId", equalTo(batchId.toString())))
             .withRequestBody(matchingJsonPath("$.products[0].name", equalTo("Webcam")))
-            .withRequestBody(matchingJsonPath("$.products[1].id", equalTo("P006")))
+            .withRequestBody(matchingJsonPath("$.products[1].name", equalTo("Microphone")))
             .withRequestBody(matchingJsonPath("$.timestamp", matching("^[0-9]+$"))) // Ensure timestamp is a number
         )
     }
@@ -303,7 +304,7 @@ class JsonApiClientTest {
         jsonApiClient.processProductsAndSendBatch(
             "http://localhost:${wireMockRule.port()}/api/products",
             "http://localhost:${wireMockRule.port()}/api/product-batches",
-            "BATCH_FAIL_SOURCE"
+            UUID.randomUUID()
         )
         // Assert: The test passes if an Exception is thrown.
     }
@@ -316,7 +317,7 @@ class JsonApiClientTest {
     fun `test processProductsAndSendBatch when destination API fails`() {
         // Arrange: Prepare products for the source and mock its success
         val sourceProducts = listOf(
-            Product("P007", "Speaker", 150.0, "Audio", true)
+            Product(UUID.randomUUID(), "Speaker", 150.0, "Audio", true)
         )
         mockSourceApiProducts(sourceProducts)
 
@@ -331,7 +332,7 @@ class JsonApiClientTest {
         jsonApiClient.processProductsAndSendBatch(
             "http://localhost:${wireMockRule.port()}/api/products",
             "http://localhost:${wireMockRule.port()}/api/product-batches",
-            "BATCH_FAIL_DEST"
+            UUID.randomUUID()
         )
         // Assert: The test passes if an Exception is thrown.
     }
