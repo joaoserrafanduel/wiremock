@@ -66,11 +66,15 @@ class JsonApiClientTest {
      * @param status The HTTP status code for the mocked response (defaults to 200 OK).
      */
     private fun mockSourceApiProducts(products: List<Product>, status: Int = 200) {
-        stubFor(get(urlEqualTo("/api/products"))
-            .willReturn(aResponse()
-                .withStatus(status)
-                .withHeader("Content-Type", "application/json")
-                .withBody(gson.toJson(products))))
+        stubFor(
+            get(urlEqualTo("/api/products"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(status)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(gson.toJson(products))
+                )
+        )
     }
 
     /**
@@ -80,11 +84,15 @@ class JsonApiClientTest {
      * @param responseBody The JSON string to be returned as the API response body (defaults to "{\"status\": \"received\"}").
      */
     private fun mockDestinationApiSuccess(status: Int = 200, responseBody: String = "{\"status\": \"received\"}") {
-        stubFor(post(urlEqualTo("/api/product-batches"))
-            .willReturn(aResponse()
-                .withStatus(status)
-                .withHeader("Content-Type", "application/json")
-                .withBody(responseBody)))
+        stubFor(
+            post(urlEqualTo("/api/product-batches"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(status)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(responseBody)
+                )
+        )
     }
 
     // --- Tests for fetchProducts ---
@@ -118,10 +126,14 @@ class JsonApiClientTest {
     @Test(expected = Exception::class)
     fun `test fetchProducts when source API returns 404`() {
         // Arrange: Configure WireMock to respond with a 404 Not Found status
-        stubFor(get(urlEqualTo("/api/products"))
-            .willReturn(aResponse()
-                .withStatus(404)
-                .withBody("Not Found")))
+        stubFor(
+            get(urlEqualTo("/api/products"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(404)
+                        .withBody("Not Found")
+                )
+        )
 
         // Act: Call the fetchProducts method. An Exception is expected here.
         jsonApiClient.fetchProducts("http://localhost:${wireMockRule.port()}/api/products")
@@ -136,10 +148,14 @@ class JsonApiClientTest {
     @Test(expected = Exception::class)
     fun `test fetchProducts when source API returns empty body`() {
         // Arrange: Configure WireMock to respond with 200 OK but no body
-        stubFor(get(urlEqualTo("/api/products"))
-            .willReturn(aResponse()
-                .withStatus(200)
-                .withBody(""))) // Empty body
+        stubFor(
+            get(urlEqualTo("/api/products"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withBody("")
+                )
+        ) // Empty body
 
         // Act: Call the fetchProducts method. An Exception is expected here.
         jsonApiClient.fetchProducts("http://localhost:${wireMockRule.port()}/api/products")
@@ -162,14 +178,22 @@ class JsonApiClientTest {
 
         mockDestinationApiSuccess()
 
-        val response = jsonApiClient.sendProductBatch("http://localhost:${wireMockRule.port()}/api/product-batches", batch)
+        val response =
+            jsonApiClient.sendProductBatch("http://localhost:${wireMockRule.port()}/api/product-batches", batch)
 
         assertEquals("{\"status\": \"received\"}", response)
 
         // Verify that the POST request was made with the correct JSON body
-        verify(postRequestedFor(urlEqualTo("/api/product-batches"))
-            .withHeader("Content-Type", equalToIgnoreCase("application/json; charset=utf-8")) // <-- CHANGED HERE
-            .withRequestBody(equalToJson(gson.toJson(batch), true, true)) // true, true for ignoreArrayOrder, ignoreExtraElements
+        verify(
+            postRequestedFor(urlEqualTo("/api/product-batches"))
+                .withHeader("Content-Type", equalToIgnoreCase("application/json; charset=utf-8")) // <-- CHANGED HERE
+                .withRequestBody(
+                    equalToJson(
+                        gson.toJson(batch),
+                        true,
+                        true
+                    )
+                ) // true, true for ignoreArrayOrder, ignoreExtraElements
         )
     }
 
@@ -194,30 +218,47 @@ class JsonApiClientTest {
 
         // Arrange: Configure WireMock to *explicitly* return a 404 for the incorrect JSON structure.
         // This stub will match the 'incorrectBatch' when it is sent.
-        stubFor(post(urlEqualTo("/api/product-batches"))
-            .withRequestBody(equalToJson(gson.toJson(incorrectBatch), true, true)) // Match the *incorrect* batch's JSON
-            .willReturn(aResponse()
-                .withStatus(404) // Explicitly return 404
-                .withHeader("Content-Type", "application/json")
-                .withBody("{\"error\": \"Invalid Timestamp or Data\"}"))) // Optional: provide a custom error body
+        stubFor(
+            post(urlEqualTo("/api/product-batches"))
+                .withRequestBody(
+                    equalToJson(
+                        gson.toJson(incorrectBatch),
+                        true,
+                        true
+                    )
+                ) // Match the *incorrect* batch's JSON
+                .willReturn(
+                    aResponse()
+                        .withStatus(404) // Explicitly return 404
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"error\": \"Invalid Timestamp or Data\"}")
+                )
+        ) // Optional: provide a custom error body
 
         try {
             // Act: Send the batch with the incorrect timestamp. This is expected to trigger the 404 stub.
-            jsonApiClient.sendProductBatch("http://localhost:${wireMockRule.port()}/api/product-batches", incorrectBatch)
+            jsonApiClient.sendProductBatch(
+                "http://localhost:${wireMockRule.port()}/api/product-batches",
+                incorrectBatch
+            )
             // If the code reaches here, it means the API accepted the incorrect JSON, which is a test failure.
             // JUnit's fail() method will mark the test as failed.
             fail("Expected an exception for incorrect JSON structure, but none was thrown.")
         } catch (e: Exception) {
             // Assert: Verify that an exception was thrown and its message indicates a 404.
             // e.message!! asserts that the exception message is not null.
-            assertTrue("Expected a failure due to API mismatch (client handling 404)",
-                e.message!!.contains("Failed to send product batch: 404 - ")) // Check for specific error message indicating 404
+            assertTrue(
+                "Expected a failure due to API mismatch (client handling 404)",
+                e.message!!.contains("Failed to send product batch: 404 - ")
+            ) // Check for specific error message indicating 404
         }
 
         // Optional: Verify that the incorrect request was indeed made exactly once.
         // This confirms the client sent the expected "bad" request.
-        verify(1, postRequestedFor(urlEqualTo("/api/product-batches"))
-            .withRequestBody(equalToJson(gson.toJson(incorrectBatch), true, true)))
+        verify(
+            1, postRequestedFor(urlEqualTo("/api/product-batches"))
+                .withRequestBody(equalToJson(gson.toJson(incorrectBatch), true, true))
+        )
     }
 
     /**
@@ -233,10 +274,14 @@ class JsonApiClientTest {
         val batch = ProductBatch(UUID.randomUUID(), products, System.currentTimeMillis())
 
         // Configure WireMock to return a 500 status for the batch POST
-        stubFor(post(urlEqualTo("/api/product-batches"))
-            .willReturn(aResponse()
-                .withStatus(500)
-                .withBody("Internal Server Error")))
+        stubFor(
+            post(urlEqualTo("/api/product-batches"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(500)
+                        .withBody("Internal Server Error")
+                )
+        )
 
         // Act: Call sendProductBatch. An Exception is expected.
         jsonApiClient.sendProductBatch("http://localhost:${wireMockRule.port()}/api/product-batches", batch)
@@ -274,13 +319,14 @@ class JsonApiClientTest {
         assertEquals("{\"status\": \"received\"}", response)
 
         // Verify: Ensure the POST request to the destination API was made correctly
-        verify(postRequestedFor(urlEqualTo("/api/product-batches"))
-            .withHeader("Content-Type", equalToIgnoreCase("application/json; charset=utf-8")) // <-- CHANGED HERE
-            // Use JSON path matchers to verify specific fields within the sent JSON body
-            .withRequestBody(matchingJsonPath("$.batchId", equalTo(batchId.toString())))
-            .withRequestBody(matchingJsonPath("$.products[0].name", equalTo("Webcam")))
-            .withRequestBody(matchingJsonPath("$.products[1].name", equalTo("Microphone")))
-            .withRequestBody(matchingJsonPath("$.timestamp", matching("^[0-9]+$"))) // Ensure timestamp is a number
+        verify(
+            postRequestedFor(urlEqualTo("/api/product-batches"))
+                .withHeader("Content-Type", equalToIgnoreCase("application/json; charset=utf-8")) // <-- CHANGED HERE
+                // Use JSON path matchers to verify specific fields within the sent JSON body
+                .withRequestBody(matchingJsonPath("$.batchId", equalTo(batchId.toString())))
+                .withRequestBody(matchingJsonPath("$.products[0].name", equalTo("Webcam")))
+                .withRequestBody(matchingJsonPath("$.products[1].name", equalTo("Microphone")))
+                .withRequestBody(matchingJsonPath("$.timestamp", matching("^[0-9]+$"))) // Ensure timestamp is a number
         )
     }
 
@@ -291,11 +337,15 @@ class JsonApiClientTest {
     @Test(expected = Exception::class)
     fun `test processProductsAndSendBatch when source API fails`() {
         // Arrange: Mock the source API to return a 403 Forbidden status
-        stubFor(get(urlEqualTo("/api/products"))
-            .willReturn(aResponse()
-                // Using HttpURLConnection.HTTP_FORBIDDEN for 403 status
-                .withStatus(HttpURLConnection.HTTP_FORBIDDEN)
-                .withBody("Access Denied")))
+        stubFor(
+            get(urlEqualTo("/api/products"))
+                .willReturn(
+                    aResponse()
+                        // Using HttpURLConnection.HTTP_FORBIDDEN for 403 status
+                        .withStatus(HttpURLConnection.HTTP_FORBIDDEN)
+                        .withBody("Access Denied")
+                )
+        )
 
         // Arrange: Mock the destination API for success (though it should not be hit)
         mockDestinationApiSuccess()
@@ -322,11 +372,15 @@ class JsonApiClientTest {
         mockSourceApiProducts(sourceProducts)
 
         // Arrange: Mock the destination API to return a 502 Bad Gateway status
-        stubFor(post(urlEqualTo("/api/product-batches"))
-            .willReturn(aResponse()
-                // Using HttpURLConnection.HTTP_BAD_GATEWAY for 502 status
-                .withStatus(HttpURLConnection.HTTP_BAD_GATEWAY)
-                .withBody("Service Unavailable")))
+        stubFor(
+            post(urlEqualTo("/api/product-batches"))
+                .willReturn(
+                    aResponse()
+                        // Using HttpURLConnection.HTTP_BAD_GATEWAY for 502 status
+                        .withStatus(HttpURLConnection.HTTP_BAD_GATEWAY)
+                        .withBody("Service Unavailable")
+                )
+        )
 
         // Act: Call the combined method. An Exception is expected.
         jsonApiClient.processProductsAndSendBatch(

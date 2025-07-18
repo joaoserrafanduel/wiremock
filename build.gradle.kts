@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "2.1.10"
     id("jacoco")
+    id("org.jetbrains.dokka") version "2.0.0"
 }
 
 group = "org.application"
@@ -84,8 +85,6 @@ tasks.jacocoTestReport {
     sourceSets(sourceSets.main.get())
 }
 
-// You can add an optional task to explicitly generate the report:
-// tasks.register("coverageReport") {
-//     dependsOn(tasks.jacocoTestReport)
-//     description = "Generates the JaCoCo code coverage report."
-// }
+tasks.dokkaHtml {
+}
+
