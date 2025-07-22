@@ -8,12 +8,12 @@ import org.application.data.Product
 import org.application.data.ProductBatch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail // Import fail for explicit test failure
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.net.HttpURLConnection
 import java.util.*
-import kotlin.test.DefaultAsserter.fail
 
 /**
  * Integration and unit tests for the [JsonApiClient] class.
@@ -121,9 +121,9 @@ class JsonApiClientTest {
 
     /**
      * Tests the behavior of `fetchProducts` when the source API returns a 404 Not Found error.
-     * Expects an Exception to be thrown by the client.
+     * Catches the expected exception and asserts its message.
      */
-    @Test(expected = Exception::class)
+    @Test
     fun `test fetchProducts when source API returns 404`() {
         // Arrange: Configure WireMock to respond with a 404 Not Found status
         stubFor(
@@ -135,17 +135,26 @@ class JsonApiClientTest {
                 )
         )
 
-        // Act: Call the fetchProducts method. An Exception is expected here.
-        jsonApiClient.fetchProducts("http://localhost:${wireMockRule.port()}/api/products")
-        // Assert: The test passes if an Exception is thrown.
+        try {
+            // Act: Call the fetchProducts method. An Exception is expected here.
+            jsonApiClient.fetchProducts("http://localhost:${wireMockRule.port()}/api/products")
+            // If the code reaches here, it means no exception was thrown, which is a test failure.
+            fail("Expected an exception for 404 response, but none was thrown.")
+        } catch (e: Exception) {
+            // Assert: Verify that an exception was thrown and its message indicates a 404.
+            assertTrue(
+                "Expected exception message to contain '404 - Not Found'",
+                e.message!!.contains("HTTP GET failed: 404 - Not Found")
+            )
+        }
     }
 
     /**
      * Tests the behavior of `fetchProducts` when the source API returns a 200 OK
      * status but with an empty response body.
-     * Expects an Exception to be thrown by the client (likely due to JSON parsing failure).
+     * Catches the expected exception and asserts its message.
      */
-    @Test(expected = Exception::class)
+    @Test
     fun `test fetchProducts when source API returns empty body`() {
         // Arrange: Configure WireMock to respond with 200 OK but no body
         stubFor(
@@ -155,11 +164,20 @@ class JsonApiClientTest {
                         .withStatus(200)
                         .withBody("")
                 )
-        ) // Empty body
+        )
 
-        // Act: Call the fetchProducts method. An Exception is expected here.
-        jsonApiClient.fetchProducts("http://localhost:${wireMockRule.port()}/api/products")
-        // Assert: The test passes if an Exception is thrown.
+        try {
+            // Act: Call the fetchProducts method. An Exception is expected here.
+            jsonApiClient.fetchProducts("http://localhost:${wireMockRule.port()}/api/products")
+            // If the code reaches here, it means no exception was thrown, which is a test failure.
+            fail("Expected an exception for empty body, but none was thrown.")
+        } catch (e: Exception) {
+            // Assert: Verify that an exception was thrown and its message indicates no content.
+            assertTrue(
+                "Expected exception message to indicate no content",
+                e.message!!.contains("No content in response body for successful request (Status: 200)")
+            )
+        }
     }
 
     // --- Tests for sendProductBatch ---
@@ -186,7 +204,7 @@ class JsonApiClientTest {
         // Verify that the POST request was made with the correct JSON body
         verify(
             postRequestedFor(urlEqualTo("/api/product-batches"))
-                .withHeader("Content-Type", equalToIgnoreCase("application/json; charset=utf-8")) // <-- CHANGED HERE
+                .withHeader("Content-Type", equalToIgnoreCase("application/json; charset=utf-8"))
                 .withRequestBody(
                     equalToJson(
                         gson.toJson(batch),
@@ -321,7 +339,7 @@ class JsonApiClientTest {
         // Verify: Ensure the POST request to the destination API was made correctly
         verify(
             postRequestedFor(urlEqualTo("/api/product-batches"))
-                .withHeader("Content-Type", equalToIgnoreCase("application/json; charset=utf-8")) // <-- CHANGED HERE
+                .withHeader("Content-Type", equalToIgnoreCase("application/json; charset=utf-8"))
                 // Use JSON path matchers to verify specific fields within the sent JSON body
                 .withRequestBody(matchingJsonPath("$.batchId", equalTo(batchId.toString())))
                 .withRequestBody(matchingJsonPath("$.products[0].name", equalTo("Webcam")))
