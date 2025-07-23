@@ -67,6 +67,7 @@ This project generates several key reports to monitor code quality, test coverag
 - **Dokka Report (API Documentation)**: Generates browsable API documentation from KDoc comments for both main and test source code.
 
   - **Location**: `build/dokka/html/index.html`
+    - Command to generate: `./gradlew clean dokkaHtml`   
 
 - **JUnit Test Report (Test Results)**: Summarizes JUnit test execution outcomes, including pass/fail status and failure details.
 
