@@ -164,7 +164,7 @@ class JsonApiClientTest {
                         .withStatus(200)
                         .withBody("")
                 )
-        )
+        ) // Empty body
 
         try {
             // Act: Call the fetchProducts method. An Exception is expected here.
@@ -281,9 +281,9 @@ class JsonApiClientTest {
 
     /**
      * Tests `sendProductBatch` behavior when the destination API returns a 500 Internal Server Error.
-     * Expects an Exception to be thrown by the client.
+     * Catches the expected exception and asserts its message.
      */
-    @Test(expected = Exception::class)
+    @Test
     fun `test sendProductBatch when destination API returns 500`() {
         // Arrange: Prepare a product batch
         val products = listOf(
@@ -301,9 +301,17 @@ class JsonApiClientTest {
                 )
         )
 
-        // Act: Call sendProductBatch. An Exception is expected.
-        jsonApiClient.sendProductBatch("http://localhost:${wireMockRule.port()}/api/product-batches", batch)
-        // Assert: The test passes if an Exception is thrown.
+        try {
+            // Act: Call sendProductBatch. An Exception is expected.
+            jsonApiClient.sendProductBatch("http://localhost:${wireMockRule.port()}/api/product-batches", batch)
+            fail("Expected an exception for 500 response, but none was thrown.")
+        } catch (e: Exception) {
+            // Assert: Verify that an exception was thrown and its message indicates a 500.
+            assertTrue(
+                "Expected exception message to contain '500 - Internal Server Error'",
+                e.message!!.contains("Failed to send product batch: 500 - Internal Server Error")
+            )
+        }
     }
 
     // --- Tests for processProductsAndSendBatch ---
@@ -350,16 +358,15 @@ class JsonApiClientTest {
 
     /**
      * Tests `processProductsAndSendBatch` behavior when the source API fails (e.g., 403 Forbidden).
-     * Expects an Exception to be thrown by the client, and verifies the destination API is not called.
+     * Catches the expected exception and asserts its message, and verifies the destination API is not called.
      */
-    @Test(expected = Exception::class)
+    @Test
     fun `test processProductsAndSendBatch when source API fails`() {
         // Arrange: Mock the source API to return a 403 Forbidden status
         stubFor(
             get(urlEqualTo("/api/products"))
                 .willReturn(
                     aResponse()
-                        // Using HttpURLConnection.HTTP_FORBIDDEN for 403 status
                         .withStatus(HttpURLConnection.HTTP_FORBIDDEN)
                         .withBody("Access Denied")
                 )
@@ -368,20 +375,32 @@ class JsonApiClientTest {
         // Arrange: Mock the destination API for success (though it should not be hit)
         mockDestinationApiSuccess()
 
-        // Act: Call the combined method. An Exception is expected.
-        jsonApiClient.processProductsAndSendBatch(
-            "http://localhost:${wireMockRule.port()}/api/products",
-            "http://localhost:${wireMockRule.port()}/api/product-batches",
-            UUID.randomUUID()
-        )
-        // Assert: The test passes if an Exception is thrown.
+        try {
+            // Act: Call the combined method. An Exception is expected.
+            jsonApiClient.processProductsAndSendBatch(
+                "http://localhost:${wireMockRule.port()}/api/products",
+                "http://localhost:${wireMockRule.port()}/api/product-batches",
+                UUID.randomUUID()
+            )
+            fail("Expected an exception for source API failure, but none was thrown.")
+        } catch (e: Exception) {
+            // Assert: Verify that an exception was thrown and its message indicates a 403.
+            assertTrue(
+                "Expected exception message to contain '403 - Access Denied'",
+                e.message!!.contains("HTTP GET failed: 403 - Access Denied")
+            )
+        }
+
+        // Verify: Ensure no POST request was made to the destination API
+        verify(0, postRequestedFor(urlEqualTo("/api/product-batches")))
     }
 
     /**
      * Tests `processProductsAndSendBatch` behavior when the destination API fails (e.g., 502 Bad Gateway).
+     * Catches the expected exception and asserts its message.
      * Ensures products are fetched from the source, but the batch fails to send.
      */
-    @Test(expected = Exception::class)
+    @Test
     fun `test processProductsAndSendBatch when destination API fails`() {
         // Arrange: Prepare products for the source and mock its success
         val sourceProducts = listOf(
@@ -394,18 +413,28 @@ class JsonApiClientTest {
             post(urlEqualTo("/api/product-batches"))
                 .willReturn(
                     aResponse()
-                        // Using HttpURLConnection.HTTP_BAD_GATEWAY for 502 status
                         .withStatus(HttpURLConnection.HTTP_BAD_GATEWAY)
                         .withBody("Service Unavailable")
                 )
         )
 
-        // Act: Call the combined method. An Exception is expected.
-        jsonApiClient.processProductsAndSendBatch(
-            "http://localhost:${wireMockRule.port()}/api/products",
-            "http://localhost:${wireMockRule.port()}/api/product-batches",
-            UUID.randomUUID()
-        )
-        // Assert: The test passes if an Exception is thrown.
+        try {
+            // Act: Call the combined method. An Exception is expected.
+            jsonApiClient.processProductsAndSendBatch(
+                "http://localhost:${wireMockRule.port()}/api/products",
+                "http://localhost:${wireMockRule.port()}/api/product-batches",
+                UUID.randomUUID()
+            )
+            fail("Expected an exception for destination API failure, but none was thrown.")
+        } catch (e: Exception) {
+            // Assert: Verify that an exception was thrown and its message indicates a 502.
+            assertTrue(
+                "Expected exception message to contain '502 - Service Unavailable'",
+                e.message!!.contains("Failed to send product batch: 502 - Service Unavailable")
+            )
+        }
+
+        // Verify: Ensure the POST request was made to the destination API
+        verify(1, postRequestedFor(urlEqualTo("/api/product-batches")))
     }
 }
