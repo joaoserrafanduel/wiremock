@@ -63,6 +63,7 @@ This project generates several key reports to monitor code quality, test coverag
 - **JaCoCo Report (Code Coverage)**: Quantifies the proportion of application code exercised by tests.
 
   - **Location**: `build/reports/jacoco/test/html/index.html`
+    - **Command to generate**: `./gradlew clean test jacocoTestReport`
 
 - **Dokka Report (API Documentation)**: Generates browsable API documentation from KDoc comments for both main and test source code.
 
@@ -72,5 +73,6 @@ This project generates several key reports to monitor code quality, test coverag
 - **JUnit Test Report (Test Results)**: Summarizes JUnit test execution outcomes, including pass/fail status and failure details.
 
   - **Location**: `build/reports/tests/test/index.html`
+    - **Command to generate**: `./gradlew clean test`
 
 These reports collectively provide a robust feedback mechanism for development, contributing to enhanced code quality, improved maintainability, and greater clarity across the project.
